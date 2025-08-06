@@ -9,6 +9,7 @@ import sys
 import subprocess
 from contextlib import redirect_stdout, redirect_stderr
 
+
 from converter import (
     convert_heic_to_jpeg,
     convert_heic_file,
@@ -22,15 +23,37 @@ if platform.system() == "Windows":
 
     ctypes.windll.shcore.SetProcessDpiAwareness(1)
 
+def is_dark_mode():
+    try:
+        # Access registry to check system theme
+        key = r"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize"
+        registry = ctypes.windll.advapi32.RegOpenKeyExW
+        hkey = ctypes.c_void_p()
+        if registry(0x80000001, key, 0, 0x20019, ctypes.byref(hkey)) == 0:
+            value = ctypes.c_ulong()
+            size = ctypes.c_ulong(4)
+            ctypes.windll.advapi32.RegQueryValueExW(hkey, "AppsUseLightTheme", 0, None, ctypes.byref(value), ctypes.byref(size))
+            ctypes.windll.advapi32.RegCloseKey(hkey)
+            return value.value == 0  # 0 means dark mode
+    except Exception:
+        pass
+    return False
 
 class HEICConverterGUI:
     def __init__(self, master):
         self.master = master
-        master.title("HEIC to JPEG Converter")
+        master.title("Supreme HEIC to JPEG Converter")
         master.geometry("800x600")
+        master.minsize(800, 600)
 
         # Set background color for a professional look
-        self.bg_color = "#f0f0f0"
+        if is_dark_mode():
+            self.bg_color = "#2E2B2B"
+            self.text_color = "white"
+        else:
+            self.bg_color = "#F0F0F0"
+            self.text_color = "black"
+
         master.configure(bg=self.bg_color)
 
         self.selected_files = []  # Store selected files
@@ -106,12 +129,13 @@ class HEICConverterGUI:
         style = ttk.Style()
         style.configure("TFrame", background=self.bg_color)
         style.configure("TLabelframe", background=self.bg_color)
-        style.configure("TLabelframe.Label", background=self.bg_color, font=("Helvetica", 11, "bold"))
+        style.configure("TLabelframe.Label", background=self.bg_color, foreground=self.text_color, font=("Helvetica", 11, "bold"))
         style.configure("TButton", font=("Helvetica", 11), padding=8)
         style.configure("Action.TButton", font=("Helvetica", 12, "bold"), padding=10)
-        style.configure("TLabel", background=self.bg_color, font=("Helvetica", 11), padding=5)
-        style.configure("TEntry", font=("Helvetica", 11), padding=8)
-        style.configure("TCheckbutton", background=self.bg_color, font=("Helvetica", 11), padding=5)
+        style.configure("TLabel", background=self.bg_color, foreground=self.text_color, font=("Helvetica", 11), padding=5)
+        style.configure("TEntry", font=("Helvetica", 11), padding=8, background="lightgray")
+        style.configure("TCheckbutton", background=self.bg_color, font=("Helvetica", 11), padding=5, foreground=self.text_color)
+        style.configure("TScale", background=self.bg_color, activebackground="blue" )
 
     def create_paths_section(self, parent):
         """Create the combined paths section for input and output selection"""
